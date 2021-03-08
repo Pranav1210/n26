@@ -34,7 +34,7 @@ public class Transaction {
         return true;
     }
 
-    public TransactionData getTransitionData() throws DataFormatError {
+    public TransactionData getTransactionData() throws DataFormatError {
         if (isValid()) {
             return new TransactionData(Double.parseDouble(String.valueOf(this.amount)),
                     Instant.parse(String.valueOf(this.getTimestamp())).toEpochMilli());

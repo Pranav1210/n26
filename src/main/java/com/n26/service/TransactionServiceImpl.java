@@ -7,21 +7,23 @@ import com.n26.common.Utility;
 import com.n26.model.Statistics;
 import com.n26.model.Transaction;
 import com.n26.repository.TransactionRepo;
+import com.n26.repository.TransactionRepoImpl;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.time.temporal.ChronoUnit;
-import java.time.temporal.TemporalUnit;
-
+import static com.n26.common.Constants.DEADLINE;
+import static com.n26.common.Constants.TEMPORAL_UNIT;
 // Implementation of transaction service
 
 @Service
 public class TransactionServiceImpl implements  TransactionService {
-
     @Autowired
     TransactionRepo repo;
-    private final int DEADLINE = 60;
-    private final TemporalUnit TEMPORAL_UNIT = ChronoUnit.SECONDS;
+
+    private final static Logger log =  LoggerFactory.getLogger(TransactionRepoImpl.class);
+
     /*
     * The idea is to append data to a queue for a particular time. Seeing transactions as a stream of data.
     * Evicting older data and creating materialized view when required.
@@ -29,13 +31,16 @@ public class TransactionServiceImpl implements  TransactionService {
     public void append(Transaction transaction) throws Exception {
         if (transaction.isValid()) {
             if (!Utility.inRange(transaction, DEADLINE, TEMPORAL_UNIT)) {
+                if(log.isErrorEnabled()) log.error("Received transaction older than 60 seconds");
                 throw new TransactionErrors();
             }
             if(Utility.aheadOfTime(transaction)) {
+                if(log.isErrorEnabled()) log.error("Received transaction ahead in time");
                 throw new AheadOfTimeTransaction();
             }
-            repo.save(transaction.getTransitionData());
+            repo.save(transaction.getTransactionData());
         } else {
+            if(log.isErrorEnabled()) log.error("Received invalid transaction with value as {}", transaction);
             throw new DataFormatError("Message format mismatch");
         }
     }

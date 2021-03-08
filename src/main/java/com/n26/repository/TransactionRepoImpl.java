@@ -12,13 +12,14 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
-import java.time.temporal.TemporalUnit;
 import java.util.DoubleSummaryStatistics;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
+
+import static com.n26.common.Constants.DEADLINE;
+import static com.n26.common.Constants.TEMPORAL_UNIT;
+import static com.n26.common.Constants.UNIT;
 
 /* Implementation of Repo which is backed by Guava Cache. Mainly using Guava cache for easy eviction of values
 * older than 60 seconds in the Map.
@@ -30,11 +31,6 @@ public class TransactionRepoImpl implements TransactionRepo {
     private final Cache<Long, BlockingQueue<Double>> cache;
     private final static Logger log =  LoggerFactory.getLogger(TransactionRepoImpl.class);
     private Statistics materializedView = new Statistics();
-
-    private final int DEADLINE = 60;
-    private final TimeUnit UNIT = TimeUnit.SECONDS;
-    private final TemporalUnit TEMPORAL_UNIT = ChronoUnit.SECONDS;
-
 
     @Autowired
     ThreadPoolProvider threadPoolProvider;
@@ -71,12 +67,12 @@ public class TransactionRepoImpl implements TransactionRepo {
 //    }
 
     private void evictValues(long olderThan) {
-        log.trace("Evicting values older than {}", olderThan);
+        if (log.isTraceEnabled()) log.trace("Evicting values older than {}", olderThan);
         repo.keySet().stream().filter(deadLine -> deadLine < olderThan).forEach(repo::remove);
     }
 
     private void generateView() {
-        log.info("Calculating materialized view of transactions");
+        if (log.isInfoEnabled()) log.info("Calculating materialized view of transactions");
         long cutOffEpoch = Instant.now().minus(DEADLINE, TEMPORAL_UNIT).toEpochMilli();
 
         DoubleSummaryStatistics dss = repo.entrySet()
@@ -91,7 +87,7 @@ public class TransactionRepoImpl implements TransactionRepo {
             return new Statistics();
         }
         generateView();
-        log.info("Returning materialized view {}", materializedView);
+        if (log.isInfoEnabled()) log.info("Returning materialized view {}", materializedView);
         return materializedView;
     }
 
@@ -99,9 +95,10 @@ public class TransactionRepoImpl implements TransactionRepo {
         try {
             repo.clear();
             materializedView = new Statistics();
+            if (log.isInfoEnabled()) log.info("Repo cleared of all previous records. Materialized view reset");
             return true;
         } catch (Exception ex) {
-            log.error("Failed to clear store");
+            if (log.isErrorEnabled()) log.error("Failed to clear store");
             return false;
         }
     }
