@@ -22,25 +22,29 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class TransactionController {
 
-    private final static Logger log = (Logger) LoggerFactory.getLogger(TransactionController.class);
+    private final static Logger log = LoggerFactory.getLogger(TransactionController.class);
 
     @Autowired
     TransactionService service;
 
     @RequestMapping(path = "/transactions", method = RequestMethod.POST)
     public ResponseEntity saveTransaction(@RequestBody Transaction data) throws Exception {
+        if (log.isTraceEnabled()) log.trace("Received request to add transaction {}", data);
         service.append(data);
         return new ResponseEntity(HttpStatus.CREATED);
     }
 
     @RequestMapping(path = "/statistics", method = RequestMethod.GET)
     public ResponseEntity<Statistics> getStatistics(){
+        if (log.isTraceEnabled()) log.trace("Received request to get statitics");
         Statistics stats = service.getStats();
+        if (log.isTraceEnabled()) log.trace("Returning stat as {}", stats);
         return ResponseEntity.ok().body(stats);
     }
 
     @RequestMapping(path = "/transactions", method = RequestMethod.DELETE)
     public ResponseEntity clearAllTransactions(){
+        if (log.isWarnEnabled()) log.warn("Cleaning store");
         service.clear();
         return new ResponseEntity(HttpStatus.NO_CONTENT);
     }
